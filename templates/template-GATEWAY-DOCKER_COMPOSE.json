@@ -40,7 +40,14 @@
   ],
   "upgradeSteps": [
     {
-      "id": "770e8400-e29b-41d4-a716-446655440001",
+      "id": "7b0e8400-e29b-41d4-a716-446655440001",
+      "nextId": "7b0e8400-e29b-41d4-a716-446655440002",
+      "title": "Remove Current Gateway containers",
+      "type": "COMPOSE_DOWN",
+      "templateOnly": false
+    },
+    {
+      "id": "7b0e8400-e29b-41d4-a716-446655440002",
       "title": "Process Compose Configuration",
       "type": "COMPOSE",
       "templateOnly": false,
