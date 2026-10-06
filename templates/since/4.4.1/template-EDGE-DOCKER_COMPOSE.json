@@ -1,0 +1,138 @@
+{
+  "configType": "DOCKER_COMPOSE",
+  "startSteps": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "nextId": "550e8400-e29b-41d4-a716-446655440001",
+      "title": "Choose Installation Type",
+      "type": "COMPOSE_TEMPLATE",
+      "templateOnly": true,
+      "composeTemplates": {
+        "in_memory": "compose/edge/${var.composeLine}/in_memory.yml",
+        "kafka": "compose/edge/${var.composeLine}/kafka.yml",
+        "hybrid": "compose/edge/${var.composeLine}/hybrid.yml"
+      }
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "title": "Process Compose Configuration",
+      "type": "COMPOSE",
+      "templateOnly": false,
+      "state": {
+        "pullImages": {
+          "value": true,
+          "userChoice": true
+        }
+      }
+    }
+  ],
+  "deleteSteps": [
+    {
+      "id": "560e8400-e29b-41d4-a716-446655440001",
+      "type": "COMPOSE_DOWN",
+      "title": "Remove Thingsboard Edge",
+      "templateOnly": false,
+      "state": {
+        "removeVolumes": {
+          "value": false,
+          "userChoice": true
+        }
+      }
+    }
+  ],
+  "upgradeSteps": [
+    {
+      "id": "580e8400-e29b-41d4-a716-446655440001",
+      "nextId": "580e8400-e29b-41d4-a716-446655440002",
+      "title": "Remove Current Edge containers",
+      "type": "COMPOSE_DOWN",
+      "templateOnly": false
+    },
+    {
+      "id": "580e8400-e29b-41d4-a716-446655440002",
+      "nextId": "580e8400-e29b-41d4-a716-446655440013",
+      "title": "Backup specified volumes",
+      "type": "BACKUP_VOLUME",
+      "templateOnly": false,
+      "state": {
+        "backupVolumes": {
+          "value": [],
+          "userChoice": true
+        }
+      }
+    },
+    {
+      "id": "580e8400-e29b-41d4-a716-446655440013",
+      "nextId": "580e8400-e29b-41d4-a716-446655440014",
+      "title": "Process Compose Configuration",
+      "type": "COMPOSE",
+      "templateOnly": false,
+      "condition": "requiresUpdateDb",
+      "state": {
+        "serviceImageRegexPatterns": { "value": ["postgres:.+"], "userChoice": false },
+        "pullImages": {
+          "value": true,
+          "userChoice": true
+        }
+      }
+    },
+    {
+      "id": "580e8400-e29b-41d4-a716-446655440014",
+      "nextId": "580e8400-e29b-41d4-a716-446655440004",
+      "title": "Process Compose Database Migration",
+      "type": "RUN_JOB",
+      "templateOnly": false,
+      "condition": "requiresUpdateDb",
+      "state": {
+        "image": { "value": "thingsboard/${var.nextEdgeRepo}:${var.nextEdgeVersion}", "userChoice": false },
+        "binds": { "value": ["${compose.svcImgRegex(thingsboard/tb-edge(?:-pe)?:.+).volumes}"], "userChoice": false },
+        "env": { "value": ["${compose.svcImgRegex(thingsboard/tb-edge(?:-pe)?:.+).environment}"], "userChoice": false },
+        "entrypoint": { "value": ["upgrade-tb-edge.sh"], "userChoice": false },
+        "pullImages": { "value": false, "userChoice": false },
+        "retries": { "value": 10, "userChoice": false },
+        "networkFromServiceImageRegexPattern": { "value": "postgres:.+", "userChoice": false }
+      }
+    },
+    {
+      "id": "580e8400-e29b-41d4-a716-446655440004",
+      "nextId": "580e8400-e29b-41d4-a716-446655440005",
+      "title": "Process Compose Configuration",
+      "type": "COMPOSE",
+      "templateOnly": false,
+      "state": {
+        "pullImages": {
+          "value": "${var.!requiresUpdateDb}",
+          "userChoice": "${var.!requiresUpdateDb}"
+        }
+      }
+    },
+    {
+      "id": "580e8400-e29b-41d4-a716-446655440005",
+      "title": "Remove backup volumes",
+      "type": "BACKUP_VOLUME_REMOVE",
+      "templateOnly": false
+    }
+  ],
+  "rollbackSteps": [
+    {
+      "id": "570e8400-e29b-41d4-a716-446655440001",
+      "type": "ROLLBACK",
+      "title": "Rollback ThingsBoard Edge",
+      "templateOnly": false,
+      "state": {
+        "failedEventId": {
+          "value": null,
+          "userChoice": false
+        }
+      }
+    }
+  ],
+  "restartSteps": [
+    {
+      "id": "580e8400-e29b-41d4-a716-446655440001",
+      "type": "COMPOSE_RESTART",
+      "title": "Restart ThingsBoard Edge",
+      "templateOnly": false
+    }
+  ]
+}

@@ -101,7 +101,18 @@ templates/
   template-EDGE-DOCKER_COMPOSE.json       # abstract (no version in name)
   template-GATEWAY-DOCKER_COMPOSE.json    # abstract
   template-GENERIC-DOCKER_COMPOSE.json    # abstract (verbatim, no versioning)
+  since/
+    4.4.1/template-EDGE-DOCKER_COMPOSE.json   # replaces the base edge template on TB 4.4.1+
 ```
+
+Every TB server syncs this branch, so a base template may only use what the oldest supported
+server understands (e.g. an unknown `${var.*}` is left as a literal). A template that needs
+something newer goes to `since/<TB version>/` under the same file name: a server uses, per file,
+the newest `since` folder whose version is not above its own, else the base file. Folders don't
+have to contain every template, and servers that predate `since/` never list it.
+
+Example: `since/4.4.1` uses `${var.nextEdgeRepo}` (`tb-edge-pe` up to 4.4.0.x, `tb-edge` from
+4.4.1) for the DB-migration job image, since the 4.4.0 -> 4.4.1 upgrade switches image repos.
 
 ### Compose — line default + optional concrete override
 Keep **one set per infra "line"** (major.minor); within a line only the image tag varies,
@@ -114,8 +125,10 @@ compose/
     3.9/{in_memory,kafka,hybrid}.yml            # line default; image: thingsboard/tb-edge-pe:${var.edgeVersion}
     4.0/{in_memory,kafka,hybrid}.yml
     4.2/{in_memory,kafka,hybrid}.yml
-    4.2/4.2.1/{in_memory,kafka,hybrid}.yml      # OPTIONAL concrete override for exactly 4.2.1
+    4.2/4.2.1/{in_memory,kafka,hybrid}.yml      # OPTIONAL override for 4.2.1 and later 4.2.x
     4.3/{in_memory,kafka,hybrid}.yml
+    4.4/{in_memory,kafka,hybrid}.yml
+    4.4/4.4.1/{in_memory,kafka,hybrid}.yml      # 4.4.1+ CE-style image: thingsboard/tb-edge:${var.edgeVersion}
   gateway/
     3.8/default.yml                             # image: thingsboard/tb-gateway:${var.gatewayVersion}
   generic/
@@ -124,7 +137,12 @@ compose/
 
 **Compose lookup during materialization** for version `V` on line `L`, per install type:
 
-> `compose/edge/L/V/<type>.yml` if it exists, else `compose/edge/L/<type>.yml`.
+> the most specific existing version subfolder, falling back to lower siblings before the line
+> default. For `4.4.3`: `4.4/4.4.3/` -> `4.4/4.4.2/` -> `4.4/4.4.1/` -> `4.4/4.4.0/` -> `4.4/`.
+
+So a subfolder applies from its version on (e.g. `4.4/4.4.1/` also serves 4.4.2, 4.4.3, …)
+until a newer sibling exists. A server never materializes versions above its own, so older
+servers never read subfolders of newer versions.
 
 Concrete override files may hardcode their tag or keep `${var.edgeVersion}` — the
 substitutor runs over whichever file is loaded, so both work.
