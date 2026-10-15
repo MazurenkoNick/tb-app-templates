@@ -102,7 +102,7 @@ templates/
   template-GATEWAY-DOCKER_COMPOSE.json    # abstract
   template-GENERIC-DOCKER_COMPOSE.json    # abstract (verbatim, no versioning)
   since/
-    4.4.0.1/template-EDGE-DOCKER_COMPOSE.json # replaces the base edge template on TB 4.4.0.1+
+    4.4.1/template-EDGE-DOCKER_COMPOSE.json   # replaces the base edge template on TB 4.4.1+
 ```
 
 Every TB server syncs this branch, so a base template may only use what the oldest supported
@@ -111,9 +111,9 @@ something newer goes to `since/<TB version>/` under the same file name: a server
 the newest `since` folder whose version is not above its own, else the base file. Folders don't
 have to contain every template, and servers that predate `since/` never list it.
 
-Example: `since/4.4.0.1` uses `${var.nextEdgeRepo}` (`tb-edge-pe` up to 4.4.0, `tb-edge` from
-4.4.0.1) for the DB-migration job image, since the 4.4.0 -> 4.4.0.1 upgrade switches image repos.
-A TB 4.4.1 server with no `since/4.4.1` folder keeps using `since/4.4.0.1`.
+Example: `since/4.4.1` uses `${var.nextEdgeRepo}` (`tb-edge-pe` up to 4.4.0.1, `tb-edge` from
+4.4.1) for the DB-migration job image, since the 4.4.0.1 -> 4.4.1 upgrade switches image repos.
+A TB 4.4.2 server with no `since/4.4.2` folder keeps using `since/4.4.1`.
 
 ### Compose — version folders, flat
 Compose sets live in **version folders side by side** (no nesting): one per infra "line"
@@ -128,7 +128,7 @@ compose/
     4.2/{in_memory,kafka,hybrid}.yml
     4.3/{in_memory,kafka,hybrid}.yml
     4.4/{in_memory,kafka,hybrid}.yml
-    4.4.0.1/{in_memory,kafka,hybrid}.yml        # 4.4.0.1+ CE-style image: thingsboard/tb-edge:${var.edgeVersion}
+    4.4.1/{in_memory,kafka,hybrid}.yml          # 4.4.1+ CE-style image: thingsboard/tb-edge:${var.edgeVersion}
   gateway/
     3.8/default.yml                             # image: thingsboard/tb-gateway:${var.gatewayVersion}
   generic/
@@ -138,9 +138,9 @@ compose/
 **Compose lookup during materialization** for version `V`, per compose file:
 
 > the file from the newest version folder that is not above `V`, falling back to older folders
-> when that folder doesn't have the file. For `4.4.1`: `4.4.0.1/` -> `4.4/` -> `4.3/` -> …
+> when that folder doesn't have the file. For `4.4.2`: `4.4.1/` -> `4.4/` -> `4.3/` -> …
 
-So a folder applies from its version on (e.g. `4.4.0.1/` also serves 4.4.0.2, 4.4.1, 4.5.0, …)
+So a folder applies from its version on (e.g. `4.4.1/` also serves 4.4.1.1, 4.4.2, 4.5.0, …)
 until a newer folder exists; add a folder only when the compose actually changes. Template
 paths keep the `${var.composeLine}` folder (`compose/edge/${var.composeLine}/kafka.yml`): newer
 servers only use it to find the parent folder to look in.
